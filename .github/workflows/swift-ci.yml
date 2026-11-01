@@ -1,0 +1,41 @@
+name: swift-ci
+
+on:
+  workflow_call:
+    inputs:
+      scheme:
+        type: string
+        required: true
+      macos:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: swift test --package-path Core
+
+  macos:
+    if: inputs.macos
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: brew install xcodegen swiftformat swiftlint
+      - run: swiftformat --lint .
+      - run: swiftlint --strict
+      - run: xcodegen
+      - run: xcodebuild build -scheme "$SCHEME" -destination platform=macOS
+        env:
+          SCHEME: ${{ inputs.scheme }}
